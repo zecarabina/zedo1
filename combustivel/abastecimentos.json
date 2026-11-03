@@ -4,6 +4,15 @@
     "litros": 30.43,
     "valor": 121.42,
     "km": 86702.0,
+    "preco_litro": 3.99,
+    "carro": "yaris"
+  },
+  {
+    "carro": "tcross",
+    "data": "2026-11-02",
+    "litros": 38.6,
+    "valor": 154.01,
+    "km": 106910.0,
     "preco_litro": 3.99
   }
 ]

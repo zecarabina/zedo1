@@ -2,9 +2,9 @@
 """Administrador de combustível do carro.
 
 Uso:
-  python3 combustivel.py add LITROS VALOR KM [--data AAAA-MM-DD]
-  python3 combustivel.py prever KM_ATUAL [--preco 3.99]
-  python3 combustivel.py resumo
+  python3 combustivel.py add LITROS VALOR KM --carro yaris [--data AAAA-MM-DD]
+  python3 combustivel.py prever KM_ATUAL --carro yaris [--preco 3.99]
+  python3 combustivel.py resumo [--carro yaris]
 
 Premissa: cada abastecimento enche o tanque. O consumo (km/L) de um
 trecho = km rodados desde o abastecimento anterior / litros do abastecimento atual.
@@ -45,15 +45,21 @@ def consumo_medio(registros):
     return sum(k for k, _ in t) / litros if litros else None
 
 
+def do_carro(todos, carro):
+    """Registros de um carro (registros antigos sem 'carro' são do yaris)."""
+    return [r for r in todos if r.get("carro", "yaris") == carro]
+
+
 def cmd_add(args):
-    reg = carregar()
+    todos = carregar()
+    reg = do_carro(todos, args.carro)
     if reg and args.km <= max(r["km"] for r in reg):
         sys.exit("Erro: a quilometragem precisa ser maior que a do último abastecimento.")
     preco = args.valor / args.litros
-    reg.append({"data": args.data, "litros": args.litros, "valor": args.valor,
+    reg.append({"carro": args.carro, "data": args.data, "litros": args.litros, "valor": args.valor,
                 "km": args.km, "preco_litro": round(preco, 3)})
-    salvar(reg)
-    print(f"Registrado: {args.litros:.2f} L, {brl(args.valor)} ({brl(preco)}/L), {args.km:.0f} km")
+    salvar(todos + [reg[-1]])
+    print(f"[{args.carro}] Registrado: {args.litros:.2f} L, {brl(args.valor)} ({brl(preco)}/L), {args.km:.0f} km")
     if len(reg) > 1:
         a, b = sorted(reg, key=lambda x: x["km"])[-2:]
         print(f"Neste trecho: {(b['km']-a['km'])/b['litros']:.2f} km/L "
@@ -61,7 +67,7 @@ def cmd_add(args):
 
 
 def cmd_prever(args):
-    reg = carregar()
+    reg = do_carro(carregar(), args.carro)
     media = consumo_medio(reg)
     if media is None:
         sys.exit("Preciso de pelo menos 2 abastecimentos para calcular o consumo.")
@@ -76,10 +82,22 @@ def cmd_prever(args):
     print(f"Você deve gastar: {brl(litros * args.preco)} (a {brl(args.preco)}/L)")
 
 
-def cmd_resumo(_):
-    reg = sorted(carregar(), key=lambda x: x["km"])
-    if not reg:
+def cmd_resumo(args):
+    todos = carregar()
+    carros = [args.carro] if args.carro else sorted({r.get("carro", "yaris") for r in todos})
+    if not carros:
         sys.exit("Nenhum abastecimento registrado.")
+    for c in carros:
+        print(f"=== {c} ===")
+        resumo_carro(do_carro(todos, c))
+        print()
+
+
+def resumo_carro(reg):
+    reg = sorted(reg, key=lambda x: x["km"])
+    if not reg:
+        print("Nenhum abastecimento registrado.")
+        return
     for r in reg:
         print(f"{r['data']}  {r['km']:>8.0f} km  {r['litros']:>6.2f} L  {brl(r['valor']):>11}  {brl(r['preco_litro'])}/L")
     print(f"\nTotal gasto: {brl(sum(r['valor'] for r in reg))}")
@@ -97,13 +115,17 @@ def main():
     a.add_argument("litros", type=float)
     a.add_argument("valor", type=float)
     a.add_argument("km", type=float)
+    a.add_argument("--carro", required=True, help="ex.: yaris, tcross")
     a.add_argument("--data", default=date.today().isoformat())
     a.set_defaults(f=cmd_add)
     v = s.add_parser("prever")
     v.add_argument("km_atual", type=float)
+    v.add_argument("--carro", required=True)
     v.add_argument("--preco", type=float, default=PRECO_PADRAO)
     v.set_defaults(f=cmd_prever)
-    s.add_parser("resumo").set_defaults(f=cmd_resumo)
+    r = s.add_parser("resumo")
+    r.add_argument("--carro")
+    r.set_defaults(f=cmd_resumo)
     args = p.parse_args()
     args.f(args)
 
