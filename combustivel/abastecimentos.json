@@ -14,5 +14,13 @@
     "valor": 154.01,
     "km": 106910.0,
     "preco_litro": 3.99
+  },
+  {
+    "carro": "tcross",
+    "data": "2026-11-09",
+    "litros": 45.88,
+    "valor": 201.41,
+    "km": 107243.0,
+    "preco_litro": 4.39
   }
 ]
